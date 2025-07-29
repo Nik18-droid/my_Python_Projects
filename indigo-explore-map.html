@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndiGo Explore Map - Find Your Next Adventure</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e3c72;
+            text-decoration: none;
+        }
+
+        .tagline {
+            color: #666;
+            font-size: 1rem;
+            font-weight: 300;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            height: calc(100vh - 100px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .sidebar h2 {
+            color: #1e3c72;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #1e3c72;
+        }
+
+        /* Budget Slider */
+        .budget-container {
+            margin-bottom: 2rem;
+        }
+
+        .budget-display {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 1rem;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #1e3c72;
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #1e3c72;
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* Search Button */
+        .search-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3);
+        }
+
+        .search-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Destination List */
+        .destination-list {
+            margin-top: 2rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .destination-list h3 {
+            color: #1e3c72;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .destination-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .destination-item:hover,
+        .destination-item.highlighted {
+            background: #e3f2fd;
+            border-left: 4px solid #1e3c72;
+        }
+
+        .destination-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .destination-price {
+            color: #1e3c72;
+            font-weight: 600;
+        }
+
+        /* Map Container */
+        .map-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            min-height: 600px;
+        }
+
+        /* Custom Map Popup */
+        .custom-popup {
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .popup-city {
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 0.25rem;
+        }
+
+        .popup-price {
+            color: #2a5298;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        /* Loading State */
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1e3c72;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 300px 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                height: auto;
+            }
+            
+            .sidebar {
+                order: 1;
+            }
+            
+            .map-container {
+                order: 2;
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <a href="#" class="logo">IndiGo</a>
+        <div class="tagline">Explore Map - Discover Your Next Adventure</div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar with Controls -->
+        <div class="sidebar">
+            <h2>Plan Your Journey</h2>
+            
+            <!-- Departure City Input -->
+            <div class="form-group">
+                <label for="departure">Departure City</label>
+                <input type="text" id="departure" value="Delhi" placeholder="Enter departure city">
+            </div>
+
+            <!-- Budget Slider -->
+            <div class="budget-container">
+                <label>Maximum Budget (per person)</label>
+                <div class="budget-display" id="budgetDisplay">₹9,000</div>
+                <input type="range" id="budgetSlider" class="slider" min="3000" max="15000" value="9000" step="500">
+                <div class="slider-labels">
+                    <span>₹3,000</span>
+                    <span>₹15,000</span>
+                </div>
+            </div>
+
+            <!-- Search Button -->
+            <button class="search-btn" id="searchBtn">Find Flights</button>
+
+            <!-- Destination List -->
+            <div class="destination-list" id="destinationList">
+                <h3>Available Destinations</h3>
+                <div id="destinationItems"></div>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Searching flights...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Mock Flight Data - Simulated database of flights from major Indian cities
+        const flightData = [
+            // From Delhi
+            { origin: "Delhi", destination: "Mumbai", lat: 19.0760, lon: 72.8777, price: 4500 },
+            { origin: "Delhi", destination: "Bangalore", lat: 12.9716, lon: 77.5946, price: 5200 },
+            { origin: "Delhi", destination: "Chennai", lat: 13.0827, lon: 80.2707, price: 5800 },
+            { origin: "Delhi", destination: "Kolkata", lat: 22.5726, lon: 88.3639, price: 4200 },
+            { origin: "Delhi", destination: "Hyderabad", lat: 17.3850, lon: 78.4867, price: 4800 },
+            { origin: "Delhi", destination: "Pune", lat: 18.5204, lon: 73.8567, price: 4600 },
+            { origin: "Delhi", destination: "Ahmedabad", lat: 23.0225, lon: 72.5714, price: 3800 },
+            { origin: "Delhi", destination: "Jaipur", lat: 26.9124, lon: 75.7873, price: 3200 },
+            { origin: "Delhi", destination: "Goa", lat: 15.2993, lon: 74.1240, price: 6200 },
+            { origin: "Delhi", destination: "Kochi", lat: 9.9312, lon: 76.2673, price: 6800 },
+            { origin: "Delhi", destination: "Indore", lat: 22.7196, lon: 75.8577, price: 4000 },
+            { origin: "Delhi", destination: "Lucknow", lat: 26.8467, lon: 80.9462, price: 3500 },
+            { origin: "Delhi", destination: "Chandigarh", lat: 30.7333, lon: 76.7794, price: 3000 },
+            { origin: "Delhi", destination: "Coimbatore", lat: 11.0168, lon: 76.9558, price: 6000 },
+            { origin: "Delhi", destination: "Vadodara", lat: 22.3072, lon: 73.1812, price: 4100 },
+
+            // From Mumbai
+            { origin: "Mumbai", destination: "Delhi", lat: 28.7041, lon: 77.1025, price: 4500 },
+            { origin: "Mumbai", destination: "Bangalore", lat: 12.9716, lon: 77.5946, price: 3800 },
+            { origin: "Mumbai", destination: "Chennai", lat: 13.0827, lon: 80.2707, price: 4200 },
+            { origin: "Mumbai", destination: "Kolkata", lat: 22.5726, lon: 88.3639, price: 5500 },
+            { origin: "Mumbai", destination: "Hyderabad", lat: 17.3850, lon: 78.4867, price: 3600 },
+            { origin: "Mumbai", destination: "Pune", lat: 18.5204, lon: 73.8567, price: 3200 },
+            { origin: "Mumbai", destination: "Ahmedabad", lat: 23.0225, lon: 72.5714, price: 3400 },
+            { origin: "Mumbai", destination: "Goa", lat: 15.2993, lon: 74.1240, price: 3800 },
+            { origin: "Mumbai", destination: "Kochi", lat: 9.9312, lon: 76.2673, price: 4500 },
+            { origin: "Mumbai", destination: "Indore", lat: 22.7196, lon: 75.8577, price: 3500 },
+
+            // From Bangalore
+            { origin: "Bangalore", destination: "Delhi", lat: 28.7041, lon: 77.1025, price: 5200 },
+            { origin: "Bangalore", destination: "Mumbai", lat: 19.0760, lon: 72.8777, price: 3800 },
+            { origin: "Bangalore", destination: "Chennai", lat: 13.0827, lon: 80.2707, price: 3200 },
+            { origin: "Bangalore", destination: "Kolkata", lat: 22.5726, lon: 88.3639, price: 5800 },
+            { origin: "Bangalore", destination: "Hyderabad", lat: 17.3850, lon: 78.4867, price: 3400 },
+            { origin: "Bangalore", destination: "Pune", lat: 18.5204, lon: 73.8567, price: 3600 },
+            { origin: "Bangalore", destination: "Goa", lat: 15.2993, lon: 74.1240, price: 3800 },
+            { origin: "Bangalore", destination: "Kochi", lat: 9.9312, lon: 76.2673, price: 3500 },
+        ];
+
+        // Global variables
+        let map;
+        let markersLayer;
+        let currentDestinations = [];
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            setupEventListeners();
+            updateBudgetDisplay();
+        });
+
+        // Initialize Leaflet map
+        function initializeMap() {
+            map = L.map('map').setView([20.5937, 78.9629], 5); // Center of India
+
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Initialize markers layer
+            markersLayer = L.layerGroup().addTo(map);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            const budgetSlider = document.getElementById('budgetSlider');
+            const searchBtn = document.getElementById('searchBtn');
+            const departureInput = document.getElementById('departure');
+
+            // Budget slider event
+            budgetSlider.addEventListener('input', updateBudgetDisplay);
+
+            // Search button event
+            searchBtn.addEventListener('click', performSearch);
+
+            // Enter key on departure input
+            departureInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+        }
+
+        // Update budget display
+        function updateBudgetDisplay() {
+            const budgetSlider = document.getElementById('budgetSlider');
+            const budgetDisplay = document.getElementById('budgetDisplay');
+            const value = parseInt(budgetSlider.value);
+            budgetDisplay.textContent = `₹${value.toLocaleString()}`;
+        }
+
+        // Perform flight search based on user inputs
+        function performSearch() {
+            const departure = document.getElementById('departure').value.trim();
+            const maxBudget = parseInt(document.getElementById('budgetSlider').value);
+            const loading = document.getElementById('loading');
+
+            if (!departure) {
+                alert('Please enter a departure city');
+                return;
+            }
+
+            // Show loading state
+            loading.style.display = 'block';
+
+            // Simulate API delay
+            setTimeout(() => {
+                // Filter flights based on departure city and budget
+                const availableFlights = flightData.filter(flight => 
+                    flight.origin.toLowerCase() === departure.toLowerCase() && 
+                    flight.price <= maxBudget
+                );
+
+                // Update map and destination list
+                updateMap(availableFlights);
+                updateDestinationList(availableFlights);
+                
+                // Hide loading state
+                loading.style.display = 'none';
+
+                // Show results message
+                if (availableFlights.length === 0) {
+                    alert(`No flights found from ${departure} within ₹${maxBudget.toLocaleString()} budget. Try increasing your budget or check the departure city.`);
+                }
+            }, 1500); // 1.5 second delay to simulate API call
+        }
+
+        // Update map with destination markers
+        function updateMap(flights) {
+            // Clear existing markers
+            markersLayer.clearLayers();
+            
+            // Store current destinations for reference
+            currentDestinations = flights;
+
+            // Add markers for each destination
+            flights.forEach((flight, index) => {
+                const marker = L.marker([flight.lat, flight.lon])
+                    .bindPopup(createPopupContent(flight))
+                    .addTo(markersLayer);
+
+                // Add click event to marker
+                marker.on('click', function() {
+                    highlightDestination(index);
+                });
+            });
+
+            // Adjust map view to show all markers
+            if (flights.length > 0) {
+                const group = new L.featureGroup(markersLayer.getLayers());
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        // Create popup content for map markers
+        function createPopupContent(flight) {
+            return `
+                <div class="custom-popup">
+                    <div class="popup-city">${flight.destination}</div>
+                    <div class="popup-price">₹${flight.price.toLocaleString()}</div>
+                </div>
+            `;
+        }
+
+        // Update destination list in sidebar
+        function updateDestinationList(flights) {
+            const destinationItems = document.getElementById('destinationItems');
+            
+            if (flights.length === 0) {
+                destinationItems.innerHTML = '<div style="text-align: center; color: #666; padding: 1rem;">No destinations found</div>';
+                return;
+            }
+
+            // Sort flights by price
+            const sortedFlights = flights.sort((a, b) => a.price - b.price);
+            
+            const html = sortedFlights.map((flight, index) => `
+                <div class="destination-item" onclick="selectDestination(${index})" data-index="${index}">
+                    <div class="destination-name">${flight.destination}</div>
+                    <div class="destination-price">₹${flight.price.toLocaleString()}</div>
+                </div>
+            `).join('');
+
+            destinationItems.innerHTML = html;
+        }
+
+        // Select destination from list
+        function selectDestination(index) {
+            const flight = currentDestinations[index];
+            
+            // Highlight the destination in list
+            highlightDestination(index);
+            
+            // Center map on selected destination
+            map.setView([flight.lat, flight.lon], 8);
+            
+            // Open popup for the marker
+            const markers = markersLayer.getLayers();
+            if (markers[index]) {
+                markers[index].openPopup();
+            }
+        }
+
+        // Highlight selected destination in the list
+        function highlightDestination(index) {
+            // Remove previous highlights
+            document.querySelectorAll('.destination-item').forEach(item => {
+                item.classList.remove('highlighted');
+            });
+            
+            // Add highlight to selected item
+            const selectedItem = document.querySelector(`[data-index="${index}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('highlighted');
+                selectedItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Custom marker icon (IndiGo blue)
+        const customIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <circle cx="12" cy="12" r="8" fill="#1e3c72" stroke="white" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="4" fill="white"/>
+                </svg>
+            `),
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -12]
+        });
+
+        // Update marker creation to use custom icon
+        function updateMap(flights) {
+            markersLayer.clearLayers();
+            currentDestinations = flights;
+
+            flights.forEach((flight, index) => {
+                const marker = L.marker([flight.lat, flight.lon], { icon: customIcon })
+                    .bindPopup(createPopupContent(flight))
+                    .addTo(markersLayer);
+
+                marker.on('click', function() {
+                    highlightDestination(index);
+                });
+            });
+
+            if (flights.length > 0) {
+                const group = new L.featureGroup(markersLayer.getLayers());
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+    </script>
+</body>
+</html>
